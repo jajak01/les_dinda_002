@@ -72,8 +72,6 @@ export default function SessionsPage() {
       {/* Form Modal */}
       <SessionForm 
         session={selectedSession} 
-        open={isFormOpen}
-        setOpen={setIsFormOpen}
         onSuccess={() => {
           setIsFormOpen(false)
           loadData()

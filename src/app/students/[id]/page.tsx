@@ -213,8 +213,6 @@ export default function StudentDetailPage() {
           </div>
         </div>
       </div>
-
-      <StudentForm open={isEditOpen} setOpen={setIsEditOpen} student={student} onSuccess={() => loadData()} />
     </div>
   )
 }
