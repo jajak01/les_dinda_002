@@ -6,7 +6,6 @@ import { Activity, DollarSign, Calendar, Users, AlertCircle } from 'lucide-react
 interface Stats {
   total_students: number
   today_sessions: number
-  this_week_sessions: number
   this_month_revenue: number
   pending_payments: number
 }
@@ -42,13 +41,6 @@ export default function StatsCards({ stats }: Props) {
       isCurrency: false,
     },
     {
-      title: 'Sesi Minggu Ini',
-      value: stats.this_week_sessions,
-      icon: Calendar,
-      color: 'text-purple-500',
-      isCurrency: false,
-    },
-    {
       title: 'Pendapatan Selesai',
       value: stats.this_month_revenue,
       icon: DollarSign,
@@ -65,7 +57,7 @@ export default function StatsCards({ stats }: Props) {
   ]
 
   return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+    <div className="grid grid-cols-2 gap-4 md:grid-cols-4 xl:grid-cols-5">
       {cards.map((card) => {
         const Icon = card.icon
         return (

@@ -23,6 +23,7 @@ type SessionWithStudent = Session & {
   notes?: string; 
   note?: string; 
   catatan?: string; 
+  payment_date?: string
 }
 
 export default function DailyCheckIn({ onSuccess }: DailyCheckInProps) {
@@ -50,8 +51,11 @@ export default function DailyCheckIn({ onSuccess }: DailyCheckInProps) {
     loadSessions()
   }, [startDate, endDate])
 
-  const loadSessions = async () => {
-    setLoading(true)
+  const loadSessions = async (silent = false) => {
+    if (!silent) {
+      setLoading(true)
+    }
+
     setError(null)
     try {
       const allSessions = await getSessions()
@@ -65,7 +69,9 @@ export default function DailyCheckIn({ onSuccess }: DailyCheckInProps) {
       setError(error.message || 'Gagal memuat data sesi')
       setSessions([])
     } finally {
-      setLoading(false)
+      if (!silent) {
+        setLoading(false)
+      }
     }
   }
 
@@ -80,7 +86,7 @@ export default function DailyCheckIn({ onSuccess }: DailyCheckInProps) {
       formData.append('notes', editNoteValue) 
       
       await updateSession(id, formData)
-      await loadSessions()
+      await loadSessions(true)
       setEditingNoteId(null) // Close the editor
       onSuccess?.()
     } catch (error: any) {
@@ -97,7 +103,7 @@ export default function DailyCheckIn({ onSuccess }: DailyCheckInProps) {
       const formData = new FormData()
       formData.append('status', status)
       await updateSession(id, formData)
-      await loadSessions()
+      await loadSessions(true)
       onSuccess?.()
     } catch (error: any) {
       setError(error.message || 'Gagal mengupdate status sesi')
@@ -118,7 +124,7 @@ export default function DailyCheckIn({ onSuccess }: DailyCheckInProps) {
         formData.append('payment_status', paymentStatus)
       }
       await updateSession(id, formData)
-      await loadSessions()
+      await loadSessions(true)
       onSuccess?.()
     } catch (error: any) {
       setError(error.message || 'Gagal mengupdate status pembayaran')
@@ -152,11 +158,46 @@ export default function DailyCheckIn({ onSuccess }: DailyCheckInProps) {
     }
   }
 
-  const getPaymentStatusBadge = (paymentStatus: string) => {
+  const getPaymentStatusBadge = (paymentStatus: string, paymentDate?: string) => {
+    const formattedDate = paymentDate
+      ? format(new Date(paymentDate), 'dd MMM yyyy')
+      : null
+
     switch (paymentStatus) {
-      case 'paid': return <div className="flex items-center gap-2"><CheckCircle className="h-4 w-4 text-green-500" /><span className="text-sm font-medium text-green-600">Lunas</span></div>
-      case 'overdue': return <div className="flex items-center gap-2"><XCircle className="h-4 w-4 text-red-500" /><span className="text-sm font-medium text-red-600">Overdue</span></div>
-      default: return <div className="flex items-center gap-2"><DollarSign className="h-4 w-4 text-yellow-500" /><span className="text-sm font-medium text-yellow-600">Pending</span></div>
+      case 'paid':
+        return (
+          <div className="flex flex-col">
+            <div className="flex items-center gap-2">
+              <CheckCircle className="h-4 w-4 text-green-500" />
+              <span className="text-sm font-medium text-green-600">Lunas</span>
+            </div>
+            {formattedDate && (
+              <span className="text-xs text-gray-500 ml-6">
+                {formattedDate}
+              </span>
+            )}
+          </div>
+        )
+
+      case 'overdue':
+        return (
+          <div className="flex flex-col">
+            <div className="flex items-center gap-2">
+              <XCircle className="h-4 w-4 text-red-500" />
+              <span className="text-sm font-medium text-red-600">Overdue</span>
+            </div>
+          </div>
+        )
+
+      default:
+        return (
+          <div className="flex flex-col">
+            <div className="flex items-center gap-2">
+              <DollarSign className="h-4 w-4 text-yellow-500" />
+              <span className="text-sm font-medium text-yellow-600">Pending</span>
+            </div>
+          </div>
+        )
     }
   }
 
@@ -257,7 +298,7 @@ export default function DailyCheckIn({ onSuccess }: DailyCheckInProps) {
 
                           <div className="flex items-center gap-3">
                             {getSessionStatusBadge(session.status)}
-                            {getPaymentStatusBadge(session.payment_status)}
+                            {getPaymentStatusBadge(session.payment_status, session.payment_date)}
                           </div>
 
                           {/* 4. The New Interactive Notes Section */}
