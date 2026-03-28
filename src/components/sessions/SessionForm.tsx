@@ -90,10 +90,10 @@ export default function SessionForm({ session, onSuccess }: SessionFormProps) {
 
     try {
       const { createSession, updateSession } = await import('@/lib/supabase/actions')
-      
+
       const formDataObj = new FormData()
       Object.entries(finalData).forEach(([key, value]) => {
-        if (value !== null && value !== undefined) {
+        if (value !== null && value !== undefined && value !== '') {
           formDataObj.append(key, value.toString())
         }
       })

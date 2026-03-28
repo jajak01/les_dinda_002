@@ -9,6 +9,16 @@ export interface Student {
   updated_at: string
 }
 
+export interface StudentListReturn extends Student {
+  created_at: string
+  updated_at: string
+}
+
+export interface GetStudentsReturn extends Student {
+  created_at: string
+  updated_at: string
+}
+
 export interface Session {
   id: string
   student_id: string

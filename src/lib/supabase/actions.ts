@@ -9,10 +9,10 @@ export async function getStudents() {
   const { data, error } = await supabaseServer
     .from('students')
     .select('*')
-    .order('created_at', { ascending: false })
+    .order('name', { ascending: true })
 
   if (error) throw error
-  return data as Student[]
+  return data as any[]
 }
 
 export async function createStudent(formData: FormData) {
