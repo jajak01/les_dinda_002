@@ -59,7 +59,7 @@ export default function StudentDetailPage() {
     
   const nominalPending = sessions
     .filter(s => s.payment_status === 'pending')
-    .reduce((sum, s) => sum + (Number(s.fee) || Number(s.price) || 0), 0)
+    .reduce((sum, s) => sum + (Number(s.price) || 0), 0)
 
   const formatIDR = (amount: number) => {
     return new Intl.NumberFormat('id-ID', {
@@ -169,7 +169,7 @@ export default function StudentDetailPage() {
                         {new Date(session.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
                       </div>
                       
-                      {/* PAYMENT STATUS BADGE (ADDED BACK) */}
+                      {/* PAYMENT STATUS BADGE */}
                       <div className={`flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest border ${
                         isPaid 
                           ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 

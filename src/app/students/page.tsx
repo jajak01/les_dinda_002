@@ -8,7 +8,7 @@ import { getStudents } from '@/lib/supabase/actions'
 import type { Student } from '@/types/database'
 
 export default function StudentsPage() {
-  const [students, setSessions] = useState<Student[]>([])
+  const [students, setStudents] = useState<Student[]>([])
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null)
   const [loading, setLoading] = useState(true)
@@ -17,7 +17,7 @@ export default function StudentsPage() {
     setLoading(true)
     try {
       const data = await getStudents()
-      setSessions(data || [])
+      setStudents(data || [])
     } catch (error) {
       console.error("Failed to load students:", error)
     } finally {
