@@ -8,6 +8,7 @@ import { getStudents } from '@/lib/supabase/actions'
 import type { Student } from '@/types/database'
 
 export default function StudentsPage() {
+  // FIXED: Changed setSessions to setStudents
   const [students, setStudents] = useState<Student[]>([])
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null)
@@ -17,6 +18,7 @@ export default function StudentsPage() {
     setLoading(true)
     try {
       const data = await getStudents()
+      // FIXED: Using setStudents instead of setSessions
       setStudents(data || [])
     } catch (error) {
       console.error("Failed to load students:", error)

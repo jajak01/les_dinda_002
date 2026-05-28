@@ -24,7 +24,7 @@ export default function LoginPage() {
             <div className="mx-auto w-16 h-16 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center shadow-lg border border-white/20 mb-4 transform hover:scale-105 transition-transform duration-300">
               <GraduationCap className="h-10 w-10 text-white" />
             </div>
-            <CardTitle className="text-2xl font-black tracking-tight text-white">Les Dinda</CardTitle>
+            <CardTitle className="text-2xl font-black tracking-tight text-white">Les CerdasIND DEMO</CardTitle>
             <CardDescription className="text-indigo-100 mt-1.5 font-medium">Aplikasi Pelacakan Les Privat</CardDescription>
           </div>
 
