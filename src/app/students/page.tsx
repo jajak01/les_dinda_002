@@ -49,7 +49,7 @@ export default function StudentsPage() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-slate-900">Manajemen Siswa</h1>
-          <p className="text-slate-500">Kelola daftar siswa Les Dinda.</p>
+          <p className="text-slate-500">Kelola daftar siswa CerdasIND.</p>
         </div>
         <button 
           className="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-indigo-700 flex items-center gap-2"

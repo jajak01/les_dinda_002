@@ -6,7 +6,7 @@ import Navbar from "@/components/layout/Navbar"; // <-- 1. Import your Navbar
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Les Dinda - Aplikasi Pelacakan Les Privat",
+  title: "CerdasIND - Aplikasi Pelacakan Les Privat",
   description: "Aplikasi untuk mengelola data siswa, jadwal les, dan pembayaran les privat",
 };
 
