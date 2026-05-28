@@ -1,22 +1,23 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { getStudents, getSessions } from '@/lib/supabase/actions'
+import { getStudent, getSessions } from '@/lib/supabase/actions'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { 
   ArrowLeft, User, School, Phone, MapPin, 
-  StickyNote, BookOpen, Calendar, Edit2, Save, X, 
+  StickyNote, BookOpen, Calendar, Edit2, 
   Loader2, LayoutDashboard, CheckCircle2, AlertCircle 
 } from 'lucide-react'
 import StudentForm from '@/components/students/StudentForm'
+import type { Student, Session } from '@/types/database'
 
 export default function StudentDetailPage() {
   const { id } = useParams()
   const router = useRouter()
-  const [student, setStudent] = useState<any>(null)
-  const [sessions, setSessions] = useState<any[]>([])
+  const [student, setStudent] = useState<Student | null>(null)
+  const [sessions, setSessions] = useState<Session[]>([])
   const [isEditOpen, setIsEditOpen] = useState(false)
   const [loading, setLoading] = useState(true)
 
@@ -24,21 +25,29 @@ export default function StudentDetailPage() {
   const [editNoteValue, setEditNoteValue] = useState('')
   const [savingId, setSavingId] = useState<string | null>(null)
 
-  useEffect(() => {
-    loadStudentData()
+  const loadStudentData = useCallback(async () => {
+    if (!id || typeof id !== 'string') return
+    setLoading(true)
+    try {
+      const currentStudent = await getStudent(id)
+      setStudent(currentStudent)
+
+      const studentSessions = await getSessions({ studentId: id })
+      setSessions(
+        [...studentSessions].sort(
+          (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+        )
+      )
+    } catch (error) {
+      console.error("Failed to load student data:", error)
+    } finally {
+      setLoading(false)
+    }
   }, [id])
 
-  async function loadStudentData() {
-    setLoading(true)
-    const allStudents = await getStudents()
-    const currentStudent = allStudents.find((s: any) => s.id === id)
-    setStudent(currentStudent)
-
-    const allSessions = await getSessions()
-    const studentSessions = allSessions.filter((s: any) => s.student_id === id)
-    setSessions(studentSessions.sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime()))
-    setLoading(false)
-  }
+  useEffect(() => {
+    loadStudentData()
+  }, [loadStudentData])
 
   // --- CALCULATION LOGIC ---
   const totalSesi = sessions.length
@@ -213,6 +222,16 @@ export default function StudentDetailPage() {
           </div>
         </div>
       </div>
+
+      <StudentForm
+        open={isEditOpen}
+        setOpen={setIsEditOpen}
+        student={student}
+        onSuccess={() => {
+          setIsEditOpen(false)
+          loadStudentData()
+        }}
+      />
     </div>
   )
 }

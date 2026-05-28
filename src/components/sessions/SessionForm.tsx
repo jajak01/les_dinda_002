@@ -10,19 +10,20 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
-  DialogTrigger,
 } from '@/components/ui/dialog'
 import { getStudents } from '@/lib/supabase/actions'
 import { Calendar, Clock } from 'lucide-react'
+import type { Session, Student } from '@/types/database'
 
 interface SessionFormProps {
-  session?: any
+  session?: Session | null
   onSuccess?: () => void
+  open: boolean
+  setOpen: (open: boolean) => void
 }
 
-export default function SessionForm({ session, onSuccess }: SessionFormProps) {
-  const [open, setOpen] = useState(false)
-  const [students, setStudents] = useState<any[]>([])
+export default function SessionForm({ session, onSuccess, open, setOpen }: SessionFormProps) {
+  const [students, setStudents] = useState<Student[]>([])
   const [submitting, setSubmitting] = useState(false)
 
   // Initial State: Set values to empty strings if no session exists
@@ -93,7 +94,7 @@ export default function SessionForm({ session, onSuccess }: SessionFormProps) {
 
       const formDataObj = new FormData()
       Object.entries(finalData).forEach(([key, value]) => {
-        if (value !== null && value !== undefined && value !== '') {
+        if (value !== null && value !== undefined) {
           formDataObj.append(key, value.toString())
         }
       })
@@ -116,12 +117,6 @@ export default function SessionForm({ session, onSuccess }: SessionFormProps) {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button variant="outline">
-          <Calendar className="mr-2 h-4 w-4" />
-          {session ? 'Edit Sesi' : 'Tambah Sesi'}
-        </Button>
-      </DialogTrigger>
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle>{session ? 'Edit Sesi' : 'Tambah Sesi Baru'}</DialogTitle>

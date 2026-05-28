@@ -1,13 +1,12 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { format } from 'date-fns'
-// 1. Added Edit2, Save, and Plus icons for the new editing UI
-import { Calendar, CheckCircle, XCircle, DollarSign, Loader2, AlertCircle, ArrowRight, StickyNote, Edit2, Save, Plus } from 'lucide-react'
+import { Calendar, CheckCircle, XCircle, DollarSign, Loader2, AlertCircle, ArrowRight, StickyNote, Edit2, Save, Plus, Clock } from 'lucide-react'
 import { getSessions } from '@/lib/supabase/actions'
 import type { Session } from '@/types/database'
 
@@ -47,33 +46,31 @@ export default function DailyCheckIn({ onSuccess }: DailyCheckInProps) {
     pendingPayment: 0
   })
 
-  useEffect(() => {
-    loadSessions()
-  }, [startDate, endDate])
-
-  const loadSessions = async (silent = false) => {
+  const loadSessions = useCallback(async (silent = false) => {
     if (!silent) {
       setLoading(true)
     }
 
     setError(null)
     try {
-      const allSessions = await getSessions()
-      const rangeSessions = allSessions.filter((s: SessionWithStudent) => {
-        return s.date >= startDate && s.date <= endDate
-      })
-      const validSessions = rangeSessions.filter((s: SessionWithStudent) => s.student)
+      const allSessions = await getSessions({ startDate, endDate })
+      const validSessions = allSessions.filter((s: SessionWithStudent) => s.student)
       setSessions(validSessions)
-    } catch (error: any) {
+    } catch (error) {
+      const errMsg = error instanceof Error ? error.message : 'Gagal memuat data sesi'
       console.error('Error loading sessions:', error)
-      setError(error.message || 'Gagal memuat data sesi')
+      setError(errMsg)
       setSessions([])
     } finally {
       if (!silent) {
         setLoading(false)
       }
     }
-  }
+  }, [startDate, endDate])
+
+  useEffect(() => {
+    loadSessions()
+  }, [loadSessions])
 
   // 3. New function to save the note to Supabase
   const updateSessionNote = async (id: string) => {
@@ -89,8 +86,9 @@ export default function DailyCheckIn({ onSuccess }: DailyCheckInProps) {
       await loadSessions(true)
       setEditingNoteId(null) // Close the editor
       onSuccess?.()
-    } catch (error: any) {
-      setError(error.message || 'Gagal menyimpan catatan')
+    } catch (error) {
+      const errMsg = error instanceof Error ? error.message : 'Gagal menyimpan catatan'
+      setError(errMsg)
     } finally {
       setUpdating(null)
     }
@@ -105,8 +103,9 @@ export default function DailyCheckIn({ onSuccess }: DailyCheckInProps) {
       await updateSession(id, formData)
       await loadSessions(true)
       onSuccess?.()
-    } catch (error: any) {
-      setError(error.message || 'Gagal mengupdate status sesi')
+    } catch (error) {
+      const errMsg = error instanceof Error ? error.message : 'Gagal mengupdate status sesi'
+      setError(errMsg)
     } finally {
       setUpdating(null)
     }
@@ -126,8 +125,9 @@ export default function DailyCheckIn({ onSuccess }: DailyCheckInProps) {
       await updateSession(id, formData)
       await loadSessions(true)
       onSuccess?.()
-    } catch (error: any) {
-      setError(error.message || 'Gagal mengupdate status pembayaran')
+    } catch (error) {
+      const errMsg = error instanceof Error ? error.message : 'Gagal mengupdate status pembayaran'
+      setError(errMsg)
     } finally {
       setUpdating(null)
     }
@@ -286,7 +286,7 @@ export default function DailyCheckIn({ onSuccess }: DailyCheckInProps) {
                               <span className="font-medium">{format(new Date(session.date), 'dd MMM yyyy')}</span>
                             </div>
                             <div className="flex items-center gap-2 bg-gray-100 px-3 py-1.5 rounded-lg">
-                              <ClockIcon />
+                              <Clock className="h-4 w-4 text-gray-500" />
                               <span className="font-medium">{session.time}</span>
                             </div>
                             {session.subject && (
@@ -389,11 +389,4 @@ export default function DailyCheckIn({ onSuccess }: DailyCheckInProps) {
     </div>
   )
 }
-
-function ClockIcon() {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 text-gray-500">
-      <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />
-    </svg>
-  )
-}
+

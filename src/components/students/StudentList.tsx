@@ -18,21 +18,29 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 
-export default function StudentList({ students, onEdit, onDelete }: any) {
+import type { Student } from '@/types/database'
+
+interface StudentListProps {
+  students: Student[]
+  onEdit: (student: Student) => void
+  onDelete: (id: string) => void
+}
+
+export default function StudentList({ students, onEdit, onDelete }: StudentListProps) {
   const router = useRouter()
   const [searchQuery, setSearchQuery] = useState('')
   const [sortBy, setSortBy] = useState<'name' | 'grade'>('name')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc')
 
   // 1. Filter Logic
-  const filteredStudents = students.filter((student: any) =>
+  const filteredStudents = students.filter((student: Student) =>
     student.name.toLowerCase().includes(searchQuery.toLowerCase())
   )
 
   // 2. Sort Logic
   const sortedStudents = [...filteredStudents].sort((a, b) => {
-    let valA = a[sortBy]?.toString().toLowerCase() || ''
-    let valB = b[sortBy]?.toString().toLowerCase() || ''
+    const valA = a[sortBy]?.toString().toLowerCase() || ''
+    const valB = b[sortBy]?.toString().toLowerCase() || ''
     
     if (sortOrder === 'asc') return valA > valB ? 1 : -1
     return valA < valB ? 1 : -1
@@ -91,7 +99,7 @@ export default function StudentList({ students, onEdit, onDelete }: any) {
       {/* Grid Deck */}
       {sortedStudents.length > 0 ? (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {sortedStudents.map((student: any) => (
+          {sortedStudents.map((student: Student) => (
             <Card 
               key={student.id} 
               className="hover:shadow-md transition-all cursor-pointer border-slate-200 bg-white group hover:-translate-y-1"

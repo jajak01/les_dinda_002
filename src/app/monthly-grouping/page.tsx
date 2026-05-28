@@ -1,40 +1,18 @@
 'use client'
 
-interface Student {
-  id: string;
-  name: string;
-  school?: string;
-  grade?: string;
-}
-
-interface Session {
-  id: string;
-  student_id: string;
-  student?: Student;
-  date: string;
-  time: string;
-  subject?: string;
-  notes?: string;
-  status: 'scheduled' | 'completed' | 'cancelled';
-  payment_status: 'pending' | 'paid' | 'overdue';
-  payment_date?: string;
-  price?: number;
-  created_at: string;
-}
-
 import { useState, useEffect, useMemo } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
-import { Search, Calendar, Clock, DollarSign, CheckCircle, XCircle, Loader2, ArrowLeft, ArrowRight, Filter, Plus, ChevronDown, ChevronRight, Trash2, Edit } from 'lucide-react'
-import { getSessions, updateSession, deleteSession, getStudents } from '@/lib/supabase/actions'
+import { Calendar, Clock, XCircle, ArrowLeft, ArrowRight, Filter, Plus, ChevronDown, ChevronRight, Trash2, Edit } from 'lucide-react'
+import { getSessions, updateSession, deleteSession } from '@/lib/supabase/actions'
 import { format, parseISO, subMonths, addMonths } from 'date-fns'
+import SessionForm from '@/components/sessions/SessionForm'
+import type { Session } from '@/types/database'
 
-// ... (Keep your Interfaces/Types)
 
 export default function MonthlyGroupingPage() {
   const [allSessions, setAllSessions] = useState<Session[]>([])
@@ -87,19 +65,26 @@ export default function MonthlyGroupingPage() {
     }).sort((a, b) => b.monthKey.localeCompare(a.monthKey))
   }, [allSessions])
 
+  useEffect(() => {
+    setExpandedMonth(format(selectedMonth, 'yyyy-MM'))
+  }, [selectedMonth])
+
   const filteredMonthlyGroups = useMemo(() => {
-    return monthlyGroupedSessions.map((group) => {
-      const filteredSessions = group.sessions.filter((session) => {
-        const searchMatch = searchQuery === '' || 
-          session.student?.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          session.subject?.toLowerCase().includes(searchQuery.toLowerCase());
-        const statusMatch = filters.status === 'all' || session.status === filters.status;
-        const paymentMatch = filters.paymentStatus === 'all' || session.payment_status === filters.paymentStatus;
-        return searchMatch && statusMatch && paymentMatch;
+    const targetMonthKey = format(selectedMonth, 'yyyy-MM')
+    return monthlyGroupedSessions
+      .filter((group) => group.monthKey === targetMonthKey)
+      .map((group) => {
+        const filteredSessions = group.sessions.filter((session) => {
+          const searchMatch = searchQuery === '' || 
+            session.student?.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            session.subject?.toLowerCase().includes(searchQuery.toLowerCase());
+          const statusMatch = filters.status === 'all' || session.status === filters.status;
+          const paymentMatch = filters.paymentStatus === 'all' || session.payment_status === filters.paymentStatus;
+          return searchMatch && statusMatch && paymentMatch;
+        });
+        return { ...group, sessions: filteredSessions };
       });
-      return { ...group, sessions: filteredSessions };
-    });
-  }, [monthlyGroupedSessions, searchQuery, filters]);
+  }, [monthlyGroupedSessions, selectedMonth, searchQuery, filters]);
 
   // Handlers
   const handleEdit = (session: Session) => { setSelectedSession(session); setIsFormOpen(true); }
@@ -255,226 +240,15 @@ export default function MonthlyGroupingPage() {
         ))}
       </div>
 
-      <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>{selectedSession ? 'Edit Sesi' : 'Tambah Sesi'}</DialogTitle></DialogHeader>
-          <SessionFormDialog session={selectedSession} onSuccess={() => { setIsFormOpen(false); loadSessions(); }} />
-        </DialogContent>
-      </Dialog>
+      <SessionForm
+        session={selectedSession}
+        open={isFormOpen}
+        setOpen={setIsFormOpen}
+        onSuccess={() => {
+          setIsFormOpen(false)
+          loadSessions()
+        }}
+      />
     </div>
-  )
-}
-
-function SessionFormDialog({ session, onSuccess }: { session: Session | null, onSuccess: () => void }) {
-  const [open, setOpen] = useState(true)
-  const [students, setStudents] = useState<Student[]>([])
-  const [submitting, setSubmitting] = useState(false)
-  const [formData, setFormData] = useState({
-    student_id: session?.student_id || '',
-    date: session?.date || new Date().toISOString().split('T')[0],
-    time: session?.time || '',
-    subject: session?.subject || '',
-    notes: session?.notes || '',
-    price: session?.price?.toString() || '20000',
-    status: session?.status || 'scheduled',
-    payment_status: session?.payment_status || 'pending',
-    payment_date: session?.payment_date || '',
-  })
-
-  useEffect(() => {
-    if (session) {
-      setFormData({
-        student_id: session.student_id || '',
-        date: session.date || new Date().toISOString().split('T')[0],
-        time: session.time || '',
-        subject: session.subject || '',
-        notes: session.notes || '',
-        price: session.price?.toString() || '20000',
-        status: session.status || 'scheduled',
-        payment_status: session.payment_status || 'pending',
-        payment_date: session.payment_date || '',
-      })
-    }
-  }, [session])
-
-  useEffect(() => {
-    if (open) {
-      loadStudents()
-    }
-  }, [open])
-
-  const loadStudents = async () => {
-    try {
-      const data = await getStudents()
-      setStudents(data)
-    } catch (error) {
-      console.error('Error loading students:', error)
-    }
-  }
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setSubmitting(true)
-
-    try {
-      const { createSession, updateSession } = await import('@/lib/supabase/actions')
-
-      const formDataObj = new FormData()
-      Object.entries(formData).forEach(([key, value]) => {
-        if (value !== null && value !== undefined && value !== '') {
-          formDataObj.append(key, value.toString())
-        }
-      })
-
-      if (session) {
-        await updateSession(session.id, formDataObj)
-      } else {
-        await createSession(formDataObj)
-      }
-
-      setOpen(false)
-      onSuccess()
-    } catch (error) {
-      console.error('Error submitting form:', error)
-      alert('Terjadi kesalahan saat menyimpan data')
-    } finally {
-      setSubmitting(false)
-    }
-  }
-
-  return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="space-y-2">
-        <Label htmlFor="student_id">Pilih Siswa</Label>
-        <select
-          id="student_id"
-          required
-          value={formData.student_id}
-          onChange={(e) => setFormData({ ...formData, student_id: e.target.value })}
-          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        >
-          <option value="">Pilih siswa</option>
-          {students.map((student) => (
-            <option key={student.id} value={student.id}>
-              {student.name} {student.school ? ` (${student.school})` : ''}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="date">Tanggal</Label>
-          <Input
-            id="date"
-            type="date"
-            required
-            value={formData.date}
-            onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-          />
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="time">Waktu</Label>
-          <Input
-            id="time"
-            type="time"
-            required
-            value={formData.time}
-            onChange={(e) => setFormData({ ...formData, time: e.target.value })}
-          />
-        </div>
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="subject">Subjek</Label>
-        <Input
-          id="subject"
-          value={formData.subject}
-          onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
-          placeholder="isikan mapel..."
-        />
-      </div>
-
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="status">Status Jadwal</Label>
-            <select
-              id="status"
-              value={formData.status}
-              onChange={(e) => setFormData({ 
-                ...formData, 
-                status: e.target.value as 'scheduled' | 'completed' | 'cancelled' 
-              })}
-              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-            >
-            <option value="scheduled">Jadwal</option>
-            <option value="completed">Selesai</option>
-            <option value="cancelled">Batal</option>
-          </select>
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="payment_status">Status Bayar</Label>
-          <select
-            id="payment_status"
-            value={formData.payment_status}
-            onChange={(e) => setFormData({ 
-              ...formData, 
-              payment_status: e.target.value as 'pending' | 'paid' | 'overdue' 
-            })}
-            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-          >
-            <option value="pending">Pending</option>
-            <option value="paid">Lunas</option>
-            <option value="overdue">Overdue</option>
-          </select>
-        </div>
-      </div>
-
-      {formData.payment_status === 'paid' && (
-        <div className="space-y-2">
-          <Label htmlFor="payment_date">Tanggal Pembayaran</Label>
-          <Input
-            id="payment_date"
-            type="date"
-            value={formData.payment_date}
-            onChange={(e) => setFormData({ ...formData, payment_date: e.target.value })}
-          />
-        </div>
-      )}
-
-      <div className="space-y-2">
-        <Label htmlFor="price">Harga (IDR)</Label>
-        <Input
-          id="price"
-          type="number"
-          min="0"
-          value={formData.price}
-          onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-          placeholder="20000"
-        />
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="notes">Catatan (Opsional)</Label>
-        <textarea
-          id="notes"
-          value={formData.notes}
-          onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-          className="flex min-h-[60px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-          placeholder="Tambahkan catatan..."
-        />
-      </div>
-
-      <div className="flex justify-end gap-2 pt-4">
-        <Button type="button" variant="outline" onClick={() => setOpen(false)}>
-          Batal
-        </Button>
-        <Button type="submit" disabled={submitting}>
-          {submitting ? <Loader2 className="animate-spin h-4 w-4 mr-2" /> : 'Simpan'}
-        </Button>
-      </div>
-    </form>
   )
 }

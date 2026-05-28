@@ -5,14 +5,25 @@ import { supabaseServer } from './server'
 import type { Student, Session } from '@/types/database'
 
 // Student Actions
-export async function getStudents() {
+export async function getStudents(): Promise<Student[]> {
   const { data, error } = await supabaseServer
     .from('students')
     .select('*')
     .order('name', { ascending: true })
 
   if (error) throw error
-  return data as any[]
+  return data as Student[]
+}
+
+export async function getStudent(id: string): Promise<Student> {
+  const { data, error } = await supabaseServer
+    .from('students')
+    .select('*')
+    .eq('id', id)
+    .single()
+
+  if (error) throw error
+  return data as Student
 }
 
 export async function createStudent(formData: FormData) {
@@ -88,7 +99,8 @@ export async function getSessions(filters?: {
   status?: string
   paymentStatus?: string
   search?: string
-}) {
+  studentId?: string
+}): Promise<Session[]> {
   // 1. CHANGE: Use "!inner" to allow filtering by student fields
   let query = supabaseServer
     .from('sessions')
@@ -111,9 +123,13 @@ export async function getSessions(filters?: {
     query = query.eq('payment_status', filters.paymentStatus)
   }
 
+  if (filters?.studentId) {
+    query = query.eq('student_id', filters.studentId)
+  }
+
   // 3. FIX: Relational filtering requires the !inner join above
   if (filters?.search) {
-    query = query.or(`name.ilike.%${filters.search}%,contact.ilike.%${filters.search}%`, { foreignTable: 'students' })
+    query = query.or(`name.ilike.%${filters.search}%,contact.ilike.%${filters.search}%`, { foreignTable: 'student' })
   }
 
   const { data, error } = await query
@@ -125,7 +141,7 @@ export async function getSessions(filters?: {
 export async function getSession(id: string) {
   const { data, error } = await supabaseServer
     .from('sessions')
-    .select('*, students(*)')
+    .select('*, student:students(*)')
     .eq('id', id)
     .single()
 
@@ -167,8 +183,8 @@ export async function createSession(formData: FormData) {
   return data as Session
 }
 
-export async function updateSession(id: string, formData: FormData) {
-  const updateData: any = {}
+export async function updateSession(id: string, formData: FormData): Promise<Session> {
+  const updateData: Record<string, string | number | null> = {}
 
   // List of possible fields to extract from formData
   const fields = ['date', 'time', 'notes', 'status', 'payment_status', 'payment_date', 'subject', 'price']
@@ -181,12 +197,17 @@ export async function updateSession(id: string, formData: FormData) {
       if (field === 'price') {
         updateData.price = value === '' ? 20000 : parseFloat(value as string)
       } else if (field === 'subject') {
-        updateData.subject = value === '' ? 'isikan mapel' : value
+        updateData.subject = value === '' ? 'isikan mapel' : (value as string)
       } else {
-        updateData[field] = value
+        updateData[field] = value === '' ? null : (value as string)
       }
     }
   })
+
+  // If status is updated to something other than 'paid', clear payment_date
+  if (updateData.payment_status && updateData.payment_status !== 'paid') {
+    updateData.payment_date = null
+  }
 
   const { data, error } = await supabaseServer
     .from('sessions')
@@ -215,42 +236,51 @@ export async function deleteSession(id: string) {
 }
 
 // Dashboard Stats
-// Dashboard Stats
 export async function getDashboardStats(filters?: { startDate?: string; endDate?: string }) {
-  const { data: sessions, error: sessionsError } = await supabaseServer.from('sessions').select('*')
-  const { data: students, error: studentsError } = await supabaseServer.from('students').select('id')
-
-  if (sessionsError || studentsError) throw sessionsError || studentsError
-
   const now = new Date()
   const todayStr = now.toISOString().split('T')[0]
   
   // Define the date range for filtering
-  // If no filters are provided, default to the start of the current month
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0]
   const effectiveStartDate = filters?.startDate || startOfMonth
-  const effectiveEndDate = filters?.endDate || '9999-12-31' // Far future if no end date
+  const effectiveEndDate = filters?.endDate || todayStr
 
-  // 1. FILTERING ENGINE
-  // We filter by date range AND ensure we never count 'cancelled' sessions in the money/count stats
-  const filteredSessions = sessions?.filter(s => {
-    const isNotCancelled = s.status !== 'cancelled'
-    const isInDateRange = s.date >= effectiveStartDate && s.date <= effectiveEndDate
-    return isNotCancelled && isInDateRange
-  }) || []
+  // 1. Fetch data with database-level filtering for efficiency
+  const [sessionsResponse, studentsResponse, todaySessionsResponse] = await Promise.all([
+    // Filtered sessions for the range
+    supabaseServer
+      .from('sessions')
+      .select('price, payment_status, status, date')
+      .gte('date', effectiveStartDate)
+      .lte('date', effectiveEndDate)
+      .neq('status', 'cancelled'),
+    
+    // Total students count
+    supabaseServer.from('students').select('id', { count: 'exact', head: true }),
+    
+    // Today's sessions count
+    supabaseServer
+      .from('sessions')
+      .select('id', { count: 'exact', head: true })
+      .eq('date', todayStr)
+      .neq('status', 'cancelled')
+  ])
+
+  if (sessionsResponse.error) throw sessionsResponse.error
+  if (studentsResponse.error) throw studentsResponse.error
+  if (todaySessionsResponse.error) throw todaySessionsResponse.error
+
+  const sessions = sessionsResponse.data || []
 
   // 2. MATH CALCULATIONS
   
-  // Today's Sessions (Strictly for today, ignoring global date filter)
-  const todaySessions = sessions?.filter(s => s.date === todayStr && s.status !== 'cancelled') || []
-
   // Pendapatan Selesai (Paid sessions within filter range)
-  const revenueSelesai = filteredSessions
+  const revenueSelesai = sessions
     .filter(s => s.payment_status === 'paid')
     .reduce((sum, s) => sum + (Number(s.price) || 0), 0)
 
   // Pendapatan Pending (Pending sessions within filter range)
-  const revenuePending = filteredSessions
+  const revenuePending = sessions
     .filter(s => s.payment_status === 'pending')
     .reduce((sum, s) => sum + (Number(s.price) || 0), 0)
 
@@ -258,11 +288,11 @@ export async function getDashboardStats(filters?: { startDate?: string; endDate?
   const totalOmzet = revenueSelesai + revenuePending
 
   return {
-    total_students: students?.length || 0,
-    today_sessions: todaySessions.length,
-    this_week_sessions: filteredSessions.length, // Total sessions in current filter range
-    this_month_revenue: revenueSelesai,          // Now strictly "Revenue Selesai"
-    pending_payments: revenuePending,            // Now strictly "Revenue Pending"
-    total_omzet: totalOmzet,                     // NEW: Total potential income
+    total_students: studentsResponse.count || 0,
+    today_sessions: todaySessionsResponse.count || 0,
+    this_week_sessions: sessions.length, 
+    this_month_revenue: revenueSelesai,
+    pending_payments: revenuePending,
+    total_omzet: totalOmzet,
   }
 }

@@ -7,13 +7,15 @@ import {
   LayoutDashboard, 
   Users, 
   Calendar, 
-  CalendarDays, // Added this icon for Monthly view
+  CalendarDays,
   CircleCheck, 
   GraduationCap, 
   Menu, 
-  X 
+  X,
+  LogOut
 } from "lucide-react";
-
+import { logoutUser } from "@/lib/supabase/authActions";
+ 
 const navItems = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
   { name: 'Attendance', href: '/checkin', icon: CircleCheck },
@@ -21,11 +23,11 @@ const navItems = [
   { name: 'Monthly', href: '/monthly-grouping', icon: CalendarDays }, // New Nav Item
   { name: 'Students', href: '/students', icon: Users },
 ];
-
+ 
 export default function Navbar() {
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
-
+ 
   return (
     <nav className="border-b bg-white/70 backdrop-blur-md sticky top-0 z-50">
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
@@ -59,8 +61,20 @@ export default function Navbar() {
             })}
           </div>
         </div>
-
+ 
         <div className="flex items-center gap-3">
+          {/* Desktop Logout Button */}
+          <button
+            onClick={async () => {
+              if (confirm("Apakah Anda yakin ingin keluar?")) {
+                await logoutUser();
+              }
+            }}
+            className="hidden md:flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+          >
+            <LogOut className="h-4 w-4" />
+            Keluar
+          </button>
           
           {/* Mobile Menu Toggle Button */}
           <button 
@@ -71,7 +85,7 @@ export default function Navbar() {
           </button>
         </div>
       </div>
-
+ 
       {/* MOBILE MENU */}
       {isOpen && (
         <div className="md:hidden absolute top-16 left-0 w-full bg-white border-b shadow-lg animate-in slide-in-from-top-2 duration-200">
@@ -96,6 +110,18 @@ export default function Navbar() {
               );
             })}
             <div className="pt-2 border-t mt-2">
+              <button
+                onClick={async () => {
+                  if (confirm("Apakah Anda yakin ingin keluar?")) {
+                    setIsOpen(false);
+                    await logoutUser();
+                  }
+                }}
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-base font-semibold text-rose-600 hover:bg-rose-50 transition-all cursor-pointer"
+              >
+                <LogOut className="h-5 w-5" />
+                Keluar
+              </button>
             </div>
           </div>
         </div>

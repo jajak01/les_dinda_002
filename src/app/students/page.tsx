@@ -5,18 +5,19 @@ import StudentList from '@/components/students/StudentList'
 import StudentForm from '@/components/students/StudentForm'
 import { UserPlus } from 'lucide-react'
 import { getStudents } from '@/lib/supabase/actions'
+import type { Student } from '@/types/database'
 
 export default function StudentsPage() {
-  const [students, setStudents] = useState<any[]>([])
+  const [students, setSessions] = useState<Student[]>([])
   const [isFormOpen, setIsFormOpen] = useState(false)
-  const [selectedStudent, setSelectedStudent] = useState<any>(null)
+  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null)
   const [loading, setLoading] = useState(true)
 
   const loadData = async () => {
     setLoading(true)
     try {
       const data = await getStudents()
-      setStudents(data || [])
+      setSessions(data || [])
     } catch (error) {
       console.error("Failed to load students:", error)
     } finally {
@@ -28,7 +29,7 @@ export default function StudentsPage() {
     loadData()
   }, [])
 
-  const handleEdit = (student: any) => {
+  const handleEdit = (student: Student) => {
     setSelectedStudent(student)
     setIsFormOpen(true)
   }

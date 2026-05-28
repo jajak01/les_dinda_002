@@ -7,18 +7,19 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { format, parseISO } from 'date-fns'
-import { Edit, Trash2, Calendar, Clock, DollarSign, CheckCircle, Loader2, XCircle } from 'lucide-react'
+import { Edit, Trash2, Calendar, Clock, DollarSign, Loader2, XCircle } from 'lucide-react'
 import { useState, useMemo } from 'react'
 import { updateSession } from '@/lib/supabase/actions'
+import type { Session } from '@/types/database'
 
 interface SessionListProps {
-  sessions: any[]
-  onEdit: (session: any) => void
+  sessions: Session[]
+  onEdit: (session: Session) => void
   onDelete: (id: string) => void
 }
 
 export default function SessionList({ sessions, onEdit, onDelete }: SessionListProps) {
-  const [selectedSession, setSelectedSession] = useState<any>(null)
+  const [selectedSession, setSelectedSession] = useState<Session | null>(null)
   const [isSaving, setIsSaving] = useState(false)
 
   // ✅ SORT (latest date + time first)
@@ -62,27 +63,7 @@ export default function SessionList({ sessions, onEdit, onDelete }: SessionListP
   }
 
   // --- ACTIONS ---
-  const handleQuickComplete = async (session: any) => {
-    if (confirm('Tandai sesi ini sebagai selesai dan lunas?')) {
-      setIsSaving(true)
-      try {
-        const formData = new FormData()
-        formData.append('status', 'completed')
-        formData.append('payment_status', 'paid')
-        formData.append('payment_date', new Date().toISOString().split('T')[0])
-
-        const updatedData = await updateSession(session.id, formData)
-        onEdit(updatedData)
-        setSelectedSession(null)
-      } catch (error) {
-        console.error("Error:", error)
-      } finally {
-        setIsSaving(false)
-      }
-    }
-  }
-
-  const handleQuickCancel = async (session: any) => {
+  const handleQuickCancel = async (session: Session) => {
     if (confirm('Batalkan sesi ini?')) {
       setIsSaving(true)
       try {
@@ -101,6 +82,7 @@ export default function SessionList({ sessions, onEdit, onDelete }: SessionListP
 
   const handleFormSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
+    if (!selectedSession) return
     setIsSaving(true)
 
     const formData = new FormData(e.currentTarget)
@@ -109,7 +91,7 @@ export default function SessionList({ sessions, onEdit, onDelete }: SessionListP
       const updatedData = await updateSession(selectedSession.id, formData)
       onEdit(updatedData)
       setSelectedSession(null)
-    } catch (error) {
+    } catch {
       alert("Gagal menyimpan.")
     } finally {
       setIsSaving(false)

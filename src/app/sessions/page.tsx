@@ -6,15 +6,21 @@ import SessionForm from '@/components/sessions/SessionForm'
 import SessionFilters from '@/components/sessions/SessionFilters'
 import { CalendarPlus, Loader2 } from 'lucide-react'
 import { getSessions, deleteSession } from '@/lib/supabase/actions'
+import type { Session } from '@/types/database'
+
+interface Filters {
+  search?: string
+  status?: string
+  paymentStatus?: string
+}
 
 export default function SessionsPage() {
-  const [sessions, setSessions] = useState<any[]>([])
-  const [filters, setFilters] = useState<any>({})
+  const [sessions, setSessions] = useState<Session[]>([])
+  const [filters, setFilters] = useState<Filters>({})
   const [isFormOpen, setIsFormOpen] = useState(false)
-  const [selectedSession, setSelectedSession] = useState<any>(null)
+  const [selectedSession, setSelectedSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
 
-  // loadData stays the same to handle filtering and fetching
   const loadData = useCallback(async () => {
     setLoading(true)
     try {
@@ -43,7 +49,7 @@ export default function SessionsPage() {
     }
   }
 
-  const handleEdit = (session: any) => {
+  const handleEdit = (session: Session) => {
     setSelectedSession(session)
     setIsFormOpen(true)
   }
@@ -57,7 +63,7 @@ export default function SessionsPage() {
           <p className="text-slate-500">Atur dan pantau jadwal les privat Dinda.</p>
         </div>
         <button
-          className="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-indigo-700 transition-colors flex items-center gap-2"
+          className="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-indigo-700 transition-colors flex items-center gap-2 cursor-pointer"
           onClick={() => {
             setSelectedSession(null)
             setIsFormOpen(true)
@@ -71,6 +77,8 @@ export default function SessionsPage() {
       {/* Form Modal */}
       <SessionForm 
         session={selectedSession} 
+        open={isFormOpen}
+        setOpen={setIsFormOpen}
         onSuccess={() => {
           setIsFormOpen(false)
           loadData()
